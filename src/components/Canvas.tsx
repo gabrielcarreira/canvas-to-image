@@ -1,34 +1,86 @@
 import { useEffect, useRef, useState } from "react";
 
+const BACKGROUND_IMAGE_URL =
+  "https://res.cloudinary.com/dvyhc5pp5/image/upload/v1716761457/jdaxh5fsomxfcuyfhbl1.png";
+
 export const Canvas = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
-  const [text, setText] = useState<string>("CANVAS");
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const [template, setTemplate] = useState([
+    {
+      text: "TITLE",
+      x: 540,
+      y: 300,
+      color: "white",
+      fontSize: 100,
+      fontWeight: 900,
+      fontFamily: "sans-serif",
+    },
+    {
+      text: "subtitle",
+      x: 540,
+      y: 700,
+      color: "red",
+      fontSize: 60,
+      fontWeight: 100,
+      fontFamily: "sans-serif",
+    },
+  ]);
 
   useEffect(() => {
-    if (!canvasRef) return;
+    if (!canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    canvas.width = 1080;
+    canvas.height = 1920;
 
-    canvas.width = 500;
-    canvas.height = 500;
+    const ctx = canvas.getContext("2d");
 
-    const context = canvas.getContext("2d");
-    if (!context) return;
+    contextRef.current = ctx;
 
-    context.lineCap = "round";
-    context.strokeStyle = "black";
-    context.lineWidth = 5;
-    context.fillStyle = "white";
-    context.font = "50px sans-serif";
-    context.textAlign = "center";
-    context.fillText(text, 250, 100);
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.src = BACKGROUND_IMAGE_URL;
 
-    contextRef.current = context;
-  }, [text]);
+    img.onload = function () {
+      imageRef.current = img;
+      drawCanvas();
+    };
+  }, []);
 
-  const saveImageToLocal = (
+  useEffect(() => {
+    drawCanvas();
+  }, [template]);
+
+  const drawCanvas = () => {
+    const ctx = contextRef.current;
+    const img = imageRef.current;
+    if (!ctx || !img) return;
+
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.drawImage(img, 0, 0);
+
+    template.forEach((item) => {
+      ctx.fillStyle = item.color;
+      ctx.font = `${item.fontWeight} ${item.fontSize}px ${item.fontFamily}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(item.text, item.x, item.y);
+    });
+  };
+
+  const handleInputChange = (index: number, field: string, value: string) => {
+    const newTemplate = [...template];
+    newTemplate[index] = {
+      ...newTemplate[index],
+      [field]:
+        field === "fontSize" || field === "fontWeight" ? Number(value) : value,
+    };
+    setTemplate(newTemplate);
+  };
+
+  const handleSaveImage = (
     event: React.MouseEvent<HTMLAnchorElement, MouseEvent>
   ) => {
     let link = event.currentTarget;
@@ -39,27 +91,34 @@ export const Canvas = () => {
   };
 
   return (
-    <div>
-      <canvas
-        className="canvas-container"
-        ref={canvasRef}
-        style={{ border: "solid 1px grey" }}
-      ></canvas>
+    <div
+      style={{ display: "grid", gridTemplateColumns: "1fr 1fr", maxWidth: 900 }}
+    >
       <div>
-        <input
-          value={text}
-          onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-            setText(event.target.value);
-          }}
-        />
+        {template.map((item, index) => (
+          <div key={index} style={{ marginBottom: "10px" }}>
+            <input
+              type="text"
+              value={item.text}
+              onChange={(event) =>
+                handleInputChange(index, "text", event.target.value)
+              }
+              placeholder="Text"
+            />
+          </div>
+        ))}
         <a
           id="download_image_link"
           href="download_link"
-          onClick={saveImageToLocal}
+          onClick={handleSaveImage}
         >
           Download Image
         </a>
       </div>
+      <canvas
+        ref={canvasRef}
+        style={{ border: "solid 1px grey", width: "100%" }}
+      />
     </div>
   );
 };
